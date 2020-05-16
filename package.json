@@ -1,0 +1,33 @@
+{
+  "name": "@mintpond/mint-socket",
+  "version": "1.0.0",
+  "description": "Message serialization wrappers for NodeJS net.Socket",
+  "author": "JCThePants",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@mintpond/mint-bos": "^2.0.1",
+    "@mintpond/mint-precon": "^1.0.0",
+    "@mintpond/mint-utils": "^2.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^7.1.2"
+  },
+  "scripts": {
+    "test": "mocha tests/mocha.*"
+  },
+  "homepage": "https://github.com/MintPond/mint-socket",
+  "bugs": {
+    "url": "https://github.com/MintPond/mint-socket/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MintPond/mint-socket.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "engines": {
+    "node": ">=10.17.0"
+  }
+}
