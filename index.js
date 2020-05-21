@@ -9,6 +9,7 @@ module.exports = {
     JsonSocket: require('./libs/class.JsonSocket'),
 
     /* Utils */
+    JsonBuffer: require('./libs/class.JsonBuffer'),
     SocketLimitBuffer: require('./libs/class.SocketLimitBuffer'),
     SocketWriter: require('./libs/class.SocketWriter')
 };

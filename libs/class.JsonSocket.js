@@ -6,7 +6,8 @@ const
     precon = require('@mintpond/mint-precon'),
     mu = require('@mintpond/mint-utils'),
     pu = require('@mintpond/mint-utils').prototypes,
-    TcpSocket = require('./abstract.TcpSocket');
+    TcpSocket = require('./abstract.TcpSocket'),
+    JsonBuffer = require('./class.JsonBuffer');
 
 
 /**
@@ -42,9 +43,7 @@ class JsonSocket extends TcpSocket {
         const _ = this;
         _._shouldEnforceObj = !!args.shouldEnforceObj;
 
-        _._buffer = '';
-        _._bufferLen = 0;
-        _._errorArr = [];
+        _._buffer = new JsonBuffer('\n');
     }
 
 
@@ -75,87 +74,41 @@ class JsonSocket extends TcpSocket {
         const maxBytes = _.portConfig.maxBytes || 10240;
 
         if (dataBuf.length > (_.portConfig.maxMessageBytes || maxBytes)) {
-            _._resetBuffer();
+            _._buffer.reset();
             _.emit(TcpSocket.EVENT_FLOOD);
             return;
         }
 
-        const addedStr = _._addBuffer(dataBuf);
+        const errorsArr = [];
+        const messagesArr = [];
+        _._buffer.append(dataBuf, messagesArr, errorsArr);
 
-        if (_._bufferLen > maxBytes) {
-            _._resetBuffer();
+        if (_._buffer.length > maxBytes) {
+            _._buffer.reset();
             _.emit(TcpSocket.EVENT_FLOOD);
             return;
         }
 
-        if (addedStr.lastIndexOf('\n') !== -1) {
+        if (_.$isRateLimitExceeded(messagesArr.length))
+            return;
 
-            const messagesArr = _._buffer.split('\n');
-            const incomplete = _._buffer.slice(-1) === '\n'
-                ? ''
-                : messagesArr.pop();
+        _.emit(TcpSocket.EVENT_MESSAGES, { messagesArr: messagesArr });
 
-            if (_.$isRateLimitExceeded(messagesArr.length))
-                return;
+        if (errorsArr.length) {
+            _.emit(TcpSocket.EVENT_MALFORMED_MESSAGE, errorsArr[0]);
+        }
+        else {
+            messagesArr.forEach(message => {
 
-            _.emit(TcpSocket.EVENT_MESSAGES, {messagesArr: messagesArr});
-
-            messagesArr.forEach(strMessage => {
-
-                if (!strMessage)
-                    return;
-
-                strMessage = strMessage.trim();
-
-                if (_.shouldEnforceObj && strMessage[0] !== '{') {
+                if (_.shouldEnforceObj && !mu.isObject(message)) {
                     _.emit(TcpSocket.EVENT_MALFORMED_MESSAGE, {
-                        message: strMessage,
+                        message: message,
                         error: new Error('Message is not an object')
                     });
-                    return;
+                } else {
+                    _.emit(TcpSocket.EVENT_MESSAGE_IN, {message: message});
                 }
-
-                const message = _._parseJson(strMessage, _._errorArr);
-                if (mu.isUndefined(message)) {
-                    _.emit(TcpSocket.EVENT_MALFORMED_MESSAGE, {
-                        message: strMessage,
-                        error: _._errorArr.pop()
-                    });
-                    return;
-                }
-
-                _.emit(TcpSocket.EVENT_MESSAGE_IN, { message: message });
             });
-
-            _._buffer = incomplete;
-            _._bufferLen = Buffer.byteLength(_._buffer, 'utf8');
-        }
-    }
-
-
-    _resetBuffer() {
-        const _ = this;
-        _._buffer = '';
-        _._bufferLen = 0;
-    }
-
-
-    _addBuffer(dataBuf) {
-        const _ = this;
-        const str = dataBuf.toString();
-        _._buffer += str;
-        _._bufferLen += dataBuf.length;
-        return str;
-    }
-
-
-    _parseJson(json, errOutArr) {
-        try {
-            return JSON.parse(json);
-        }
-        catch (err) {
-            errOutArr.push(err);
-            return undefined;
         }
     }
 

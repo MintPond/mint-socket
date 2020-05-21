@@ -132,7 +132,7 @@ describe('JsonSocket', () => {
 
             jsonSocket.on(TcpSocket.EVENT_MESSAGES, ev => {
                 delete ev.messagesArr[0]._bufferTimeMs;
-                assert.strictEqual(ev.messagesArr[0], JSON.stringify(msg));
+                assert.deepEqual(ev.messagesArr[0], msg);
                 done();
             });
 
